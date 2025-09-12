@@ -1,0 +1,1 @@
+// To be implemented: A single-threaded Snowflake ID generator.
