@@ -2,6 +2,8 @@
 name = "snowflake-id-generator"
 version = "0.1.0"
 edition = "2024"
+description = "Simple implementation of snowflake id generator"
+license = "Public Domain"
 
 [dependencies]
 tokio = { version = "1.47.1", features = ["sync", "rt", "macros"] }
