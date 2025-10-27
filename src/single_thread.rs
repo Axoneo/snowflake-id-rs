@@ -7,15 +7,26 @@ pub mod sync_generator {
     }
 
     impl SnowflakeGenerator {
+        /// Create a new synchronous Snowflake ID generator.
+        /// 
+        /// # Arguments
+        /// * `epoch` - The custom epoch timestamp in milliseconds.
+        /// * `worker_id` - The worker ID (0-1023).
+        /// # Errors
+        /// Returns `SnowflakeError::WorkerIdOutOfRange` if the worker_id is out of range.
+        /// 
+        /// # Panics
+        /// Panics if the epoch is set in the future relative to the current system time.
         pub fn new(epoch: i64, worker_id: u16) -> Result<Self> {
             Ok(Self {
                 inner: std::rc::Rc::new(std::cell::RefCell::new(Snowflake::new(epoch, worker_id)?)),
             })
         }
 
-        pub fn generate_id(&self) -> Result<i64> {
+        /// Generate a new Snowflake ID.
+        pub fn generate_id(&self) -> i64 {
             let mut guard = self.inner.borrow_mut();
-            Ok(guard.generate_id())
+            guard.generate_id()
         }
     }
 
@@ -46,7 +57,7 @@ mod tests {
         let ids = 1_000_000;
         let time = std::time::Instant::now();
         for _ in 0..ids {
-            snowflake.generate_id().unwrap();
+            snowflake.generate_id();
         }
         let elapsed = time.elapsed();
         println!(
