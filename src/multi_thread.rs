@@ -1,52 +1,59 @@
-use crate::common::SnowflakeState as Snowflake;
-use crate::common::Result;
+pub mod async_generator {
+    use crate::common::SnowflakeState as Snowflake;
+    use crate::common::Result;
 
-pub struct MultiThreadedAsyncGenerator {
-    inner: std::sync::Arc<tokio::sync::Mutex<Snowflake>>,
-}
-
-impl MultiThreadedAsyncGenerator {
-    pub fn new(epoch: i64, worker_id: u16) -> Result<Self> {
-        Ok(Self {
-            inner: std::sync::Arc::new(tokio::sync::Mutex::new(Snowflake::new(epoch, worker_id)?)),
-        })
+    pub struct SnowflakeGenerator {
+        inner: std::sync::Arc<tokio::sync::Mutex<Snowflake>>,
     }
 
-    pub async fn generate_id(&self) -> i64 {
-        let mut guard = self.inner.lock().await;
-        guard.generate_id()
-    }
-}
+    impl SnowflakeGenerator {
+        pub fn new(epoch: i64, worker_id: u16) -> Result<Self> {
+            Ok(Self {
+                inner: std::sync::Arc::new(tokio::sync::Mutex::new(Snowflake::new(epoch, worker_id)?)),
+            })
+        }
 
-impl Clone for MultiThreadedAsyncGenerator {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
+        pub async fn generate_id(&self) -> i64 {
+            let mut guard = self.inner.lock().await;
+            guard.generate_id()
+        }
+    }
+
+    impl Clone for SnowflakeGenerator {
+        fn clone(&self) -> Self {
+            Self {
+                inner: self.inner.clone(),
+            }
         }
     }
 }
 
-pub struct MultiThreadedSyncGenerator {
-    inner: std::sync::Arc<std::sync::Mutex<Snowflake>>,
-}
+pub mod sync_generator {
+    use crate::common::SnowflakeState as Snowflake;
+    use crate::common::Result;
 
-impl MultiThreadedSyncGenerator {
-    pub fn new(epoch: i64, worker_id: u16) -> Result<Self> {
-        Ok(Self {
-            inner: std::sync::Arc::new(std::sync::Mutex::new(Snowflake::new(epoch, worker_id)?)),
-        })
+    pub struct SnowflakeGenerator {
+        inner: std::sync::Arc<std::sync::Mutex<Snowflake>>,
     }
 
-    pub fn generate_id(&self) -> Result<i64> {
-        let mut guard = self.inner.lock().map_err(|_| crate::common::SnowflakeError::PoisonError)?;
-        Ok(guard.generate_id())
-    }
-}
+    impl SnowflakeGenerator {
+        pub fn new(epoch: i64, worker_id: u16) -> Result<Self> {
+            Ok(Self {
+                inner: std::sync::Arc::new(std::sync::Mutex::new(Snowflake::new(epoch, worker_id)?)),
+            })
+        }
 
-impl Clone for MultiThreadedSyncGenerator {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
+        pub fn generate_id(&self) -> Result<i64> {
+            let mut guard = self.inner.lock().map_err(|_| crate::common::SnowflakeError::PoisonError)?;
+            Ok(guard.generate_id())
+        }
+    }
+
+    impl Clone for SnowflakeGenerator {
+        fn clone(&self) -> Self {
+            Self {
+                inner: self.inner.clone(),
+            }
         }
     }
 }
@@ -54,6 +61,7 @@ impl Clone for MultiThreadedSyncGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::SnowflakeState as Snowflake;
 
     #[tokio::test]
     async fn test_snowflake_id_generation() {
@@ -70,7 +78,7 @@ mod tests {
         let time = std::time::Instant::now();
         let ids = 1000000;
         for i in 0..threads {
-            let snowflake = MultiThreadedAsyncGenerator::new(0, i as u16).unwrap();
+            let snowflake = async_generator::SnowflakeGenerator::new(0, i as u16).unwrap();
             let handle = tokio::spawn(async move {
                 for _ in 0..ids {
                     snowflake.generate_id().await;
@@ -91,7 +99,7 @@ mod tests {
         let time = std::time::Instant::now();
         let ids = 1000000;
         for i in 0..threads {
-            let snowflake = MultiThreadedSyncGenerator::new(0, i as u16).unwrap();
+            let snowflake = sync_generator::SnowflakeGenerator::new(0, i as u16).unwrap();
             let handle = std::thread::spawn(move || {
                 for _ in 0..ids {
                     snowflake.generate_id().unwrap();
