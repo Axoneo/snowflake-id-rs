@@ -1,5 +1,5 @@
 [package]
-name = "snowflake-id"
+name = "snowflake-id-generator"
 version = "0.2.0"
 edition = "2024"
 description = "Simple implementation of snowflake id generator"
