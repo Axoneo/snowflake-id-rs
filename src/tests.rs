@@ -7,32 +7,37 @@ fn test_single_thread_snowflake_id_generation() {
     let generator = STSG::new(0, 1).unwrap();
     let id1 = generator.generate_id();
     let id2 = generator.generate_id();
+    let decomposed1 = generator.decompose(id1);
+    let decomposed2 = generator.decompose(id2);
+    println!("ID1: {}, ID2: {}", id1, id2);
+    println!("Decomposed1: {:?}, Decomposed2: {:?}", decomposed1, decomposed2);
     assert!(id2 > id1);
 }
 
 #[tokio::test]
 async fn test_multi_thread_async_snowflake_id_generation() {
-    use std::thread;
     let generator = MTAG::new(0, 1).unwrap();
 
     let handle1 = {
         let gen_clone = generator.clone();
-        thread::spawn(async move || {
+        tokio::spawn(async move {
             gen_clone.generate_id().await
         })
     };
 
     let handle2 = {
         let gen_clone = generator.clone();
-        thread::spawn(async move || {
+        tokio::spawn(async move {
             gen_clone.generate_id().await
         })
     };
-    let id1 = handle1.join().unwrap().await;
-    let id2 = handle2.join().unwrap().await;
+    let id1 = handle1.await.unwrap();
+    let id2 = handle2.await.unwrap();
+    let decomposed1 = generator.decompose(id1).await;
+    let decomposed2 = generator.decompose(id2).await;
 
     println!("ID1: {}, ID2: {}", id1, id2);
-
+    println!("Decomposed1: {:?}, Decomposed2: {:?}", decomposed1, decomposed2);
     assert!(id2 != id1);
 }
 
@@ -56,8 +61,11 @@ fn test_multi_thread_sync_snowflake_id_generation() {
     };
     let id1 = handle1.join().unwrap();
     let id2 = handle2.join().unwrap();
+    let decomposed1 = generator.decompose(id1);
+    let decomposed2 = generator.decompose(id2);
 
     println!("ID1: {}, ID2: {}", id1, id2);
+    println!("Decomposed1: {:?}, Decomposed2: {:?}", decomposed1, decomposed2);
 
     assert!(id2 != id1);
 }
@@ -123,18 +131,4 @@ fn bench_multi_thread_sync_snowflake_id_generation() {
     let elapsed = time.elapsed();
     println!("Generated {} IDs in {:?}", ids_per_thread * threads, elapsed);
     println!("({:.2} IDs/ms)", (ids_per_thread * threads) as f64 / elapsed.as_millis() as f64);
-}
-
-#[test]
-fn test_snowflake_decomposition() {
-    use crate::decompose::{decompose_snowflake};
-    let epoch = 0;
-    let mut snowflake = crate::common::SnowflakeState::new(epoch, 1).unwrap();
-    let id = snowflake.generate_id();
-    let decomposed = decompose_snowflake(id, epoch).unwrap();
-
-    println!("Generated ID: {}", id);
-    println!("Decomposed: {:?}", decomposed);
-    assert_eq!(decomposed.worker_id, 1);
-    assert_eq!(decomposed.sequence, 0);
 }

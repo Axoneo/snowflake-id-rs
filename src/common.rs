@@ -54,7 +54,31 @@ impl SnowflakeState {
         self.sequence += 1;
         id
     }
+
+    pub fn decompose(&self, id: i64) -> SnowflakeDecomposed {
+        let timestamp = (id >> 22) + self.epoch;
+        let worker_id = ((id >> 12) & 0x3FF) as u16;
+        let sequence = (id & 0xFFF) as u16;
+
+        SnowflakeDecomposed {
+            timestamp,
+            worker_id,
+            sequence,
+        }
+    }
 }
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SnowflakeDecomposed {
+    /// The timestamp component of the Snowflake ID in milliseconds since epoch.
+    pub timestamp: i64,
+    /// The worker ID component of the Snowflake ID.
+    pub worker_id: u16,
+    /// The sequence number component of the Snowflake ID.
+    pub sequence: u16,
+}
+
+
 
 #[derive(Debug)]
 pub enum SnowflakeError {

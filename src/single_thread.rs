@@ -28,6 +28,11 @@ pub mod sync_generator {
             let mut guard = self.inner.borrow_mut();
             guard.generate_id()
         }
+
+        /// Decompose a Snowflake ID into its components.
+        pub fn decompose(&self, id: i64) -> crate::common::SnowflakeDecomposed {
+            self.inner.borrow().decompose(id)
+        }
     }
 
     impl Clone for SnowflakeGenerator {

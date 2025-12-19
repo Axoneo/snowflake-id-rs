@@ -30,6 +30,12 @@ pub mod async_generator {
             let mut guard = self.inner.lock().await;
             guard.generate_id()
         }
+
+        /// Decompose a Snowflake ID into its components.
+        pub async fn decompose(&self, id: i64) -> crate::common::SnowflakeDecomposed {
+            let guard = self.inner.lock().await;
+            guard.decompose(id)
+        }
     }
 
     impl Clone for SnowflakeGenerator {
@@ -74,6 +80,17 @@ pub mod sync_generator {
             let mut guard = self.inner.lock();
             match guard {
                 Ok(ref mut g) => g.generate_id(),
+                Err(e) => {
+                    panic!("Mutex poisoned: {}", e);
+                },
+            }
+        }
+
+        /// Decompose a Snowflake ID into its components.
+        pub fn decompose(&self, id: i64) -> crate::common::SnowflakeDecomposed {
+            let guard = self.inner.lock();
+            match guard {
+                Ok(ref g) => g.decompose(id),
                 Err(e) => {
                     panic!("Mutex poisoned: {}", e);
                 },
